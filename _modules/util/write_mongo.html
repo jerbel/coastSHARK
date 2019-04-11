@@ -1,0 +1,319 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>util.write_mongo &mdash; coastSHARK 2.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> coastSHARK
+          
+
+          
+            
+            <img src="../../_static/SmartSHARK_read_the_docs_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">1. Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../extension.html">2. How to Extend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plugin_packaging.html">3. Plugin Packaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">4. API Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">coastSHARK</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>util.write_mongo</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for util.write_mongo</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">mongoengine</span> <span class="k">import</span> <span class="n">connect</span>
+<span class="kn">from</span> <span class="nn">pycoshark.mongomodels</span> <span class="k">import</span> <span class="n">Project</span><span class="p">,</span> <span class="n">VCSSystem</span><span class="p">,</span> <span class="n">File</span><span class="p">,</span> <span class="n">Commit</span><span class="p">,</span> <span class="n">CodeEntityState</span>
+<span class="kn">from</span> <span class="nn">pycoshark.utils</span> <span class="k">import</span> <span class="n">get_code_entity_state_identifier</span><span class="p">,</span> <span class="n">create_mongodb_uri_string</span>
+<span class="kn">from</span> <span class="nn">.complexity_java</span> <span class="k">import</span> <span class="n">SourcemeterConversion</span>
+
+
+<div class="viewcode-block" id="MongoDb"><a class="viewcode-back" href="../../api.html#util.write_mongo.MongoDb">[docs]</a><span class="k">class</span> <span class="nc">MongoDb</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This class just wraps the Mongo connection code and the query for fetching the correct CodeEntityState for inserting the AST information.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">authentication</span><span class="p">,</span> <span class="n">ssl</span><span class="p">,</span> <span class="n">project_name</span><span class="p">,</span> <span class="n">vcs_url</span><span class="p">,</span> <span class="n">revision</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">project_name</span> <span class="o">=</span> <span class="n">project_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vcs_url</span> <span class="o">=</span> <span class="n">vcs_url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">revision</span> <span class="o">=</span> <span class="n">revision</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">database</span> <span class="o">=</span> <span class="n">database</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uri</span> <span class="o">=</span> <span class="n">create_mongodb_uri_string</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">authentication</span><span class="p">,</span> <span class="n">ssl</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;coastSHARK&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">uri</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MongoDb.write_imports"><a class="viewcode-back" href="../../api.html#util.write_mongo.MongoDb.write_imports">[docs]</a>    <span class="k">def</span> <span class="nf">write_imports</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">imports</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write imports to code_entity_states.</span>
+
+<span class="sd">        :param str filepath: The full path of this file.</span>
+<span class="sd">        :param list imports: A list of strings containing the imports.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">project</span> <span class="o">=</span> <span class="n">Project</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project_name</span><span class="p">)</span>
+        <span class="n">vcs</span> <span class="o">=</span> <span class="n">VCSSystem</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">vcs_url</span><span class="p">,</span> <span class="n">project_id</span><span class="o">=</span><span class="n">project</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">revision_hash</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">revision</span><span class="p">,</span> <span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">filepath</span><span class="p">,</span> <span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="n">s_key</span> <span class="o">=</span> <span class="n">get_code_entity_state_identifier</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="p">(</span><span class="n">s_key</span><span class="o">=</span><span class="n">s_key</span><span class="p">)</span><span class="o">.</span><span class="n">upsert_one</span><span class="p">(</span><span class="n">imports</span><span class="o">=</span><span class="n">imports</span><span class="p">,</span> <span class="n">ce_type</span><span class="o">=</span><span class="s1">&#39;file&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="n">filepath</span><span class="p">,</span> <span class="n">commit_id</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">file_id</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MongoDb.write_node_type_counts"><a class="viewcode-back" href="../../api.html#util.write_mongo.MongoDb.write_node_type_counts">[docs]</a>    <span class="k">def</span> <span class="nf">write_node_type_counts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">node_count</span><span class="p">,</span> <span class="n">node_type_counts</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write AST bag-of-words and number of AST nodes for this file to code_entity_states.</span>
+
+<span class="sd">        :param str filepath: The full path of this file.</span>
+<span class="sd">        :param int node_count: The number of AST nodes.</span>
+<span class="sd">        :param dict node_type_counts: The number for each type of AST node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">project</span> <span class="o">=</span> <span class="n">Project</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project_name</span><span class="p">)</span>
+        <span class="n">vcs</span> <span class="o">=</span> <span class="n">VCSSystem</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">vcs_url</span><span class="p">,</span> <span class="n">project_id</span><span class="o">=</span><span class="n">project</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">revision_hash</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">revision</span><span class="p">,</span> <span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">filepath</span><span class="p">,</span> <span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="n">tmp</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;set__metrics__</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">node_type_counts</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;set__metrics__node_count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_count</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;ce_type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;file&#39;</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;long_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filepath</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;commit_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">id</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;file_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">id</span>
+
+        <span class="n">s_key</span> <span class="o">=</span> <span class="n">get_code_entity_state_identifier</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="p">(</span><span class="n">s_key</span><span class="o">=</span><span class="n">s_key</span><span class="p">)</span><span class="o">.</span><span class="n">upsert_one</span><span class="p">(</span><span class="o">**</span><span class="n">tmp</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MongoDb.write_method_metrics"><a class="viewcode-back" href="../../api.html#util.write_mongo.MongoDb.write_method_metrics">[docs]</a>    <span class="k">def</span> <span class="nf">write_method_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">method_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write additional method metrics.</span>
+
+<span class="sd">        :param str filepath: The full path of this file.</span>
+<span class="sd">        :param dict method_data: The extracted method metrics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">project</span> <span class="o">=</span> <span class="n">Project</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project_name</span><span class="p">)</span>
+        <span class="n">vcs</span> <span class="o">=</span> <span class="n">VCSSystem</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">vcs_url</span><span class="p">,</span> <span class="n">project_id</span><span class="o">=</span><span class="n">project</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">revision_hash</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">revision</span><span class="p">,</span> <span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">filepath</span><span class="p">,</span> <span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">SourcemeterConversion</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">method_data</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.</span><span class="si">{}</span><span class="s1">.</span><span class="si">{}</span><span class="s1">(&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;package_name&#39;</span><span class="p">],</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;class_name&#39;</span><span class="p">],</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;method_name&#39;</span><span class="p">])</span>
+            <span class="n">match_long_name</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">get_sm_long_name</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">long_name__startswith</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">commit_id</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">file_id</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">ce_type</span><span class="o">=</span><span class="s1">&#39;method&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;[METHOD NOT FOUND] long_name: </span><span class="si">{}</span><span class="s1">, commit_id: </span><span class="si">{}</span><span class="s1">, file_id: </span><span class="si">{}</span><span class="s1">, probably wrong method path&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># we have only one match, this is simple as we just write the data</span>
+            <span class="k">if</span> <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">long_name__startswith</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">commit_id</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">file_id</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">ce_type</span><span class="o">=</span><span class="s1">&#39;method&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">ces</span> <span class="o">=</span> <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">long_name__startswith</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">commit_id</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">file_id</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">ce_type</span><span class="o">=</span><span class="s1">&#39;method&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">long_name</span> <span class="o">=</span> <span class="n">ces</span><span class="o">.</span><span class="n">long_name</span>
+
+                <span class="n">s_key</span> <span class="o">=</span> <span class="n">get_code_entity_state_identifier</span><span class="p">(</span><span class="n">long_name</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+                <span class="n">tmp</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;set__metrics__cognitive_complexity_sonar&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;cognitive_complexity_sonar&#39;</span><span class="p">]</span>
+                <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;set__metrics__cyclomatic_complexity_test&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;cyclomatic_complexity&#39;</span><span class="p">]</span>
+
+                <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="p">(</span><span class="n">s_key</span><span class="o">=</span><span class="n">s_key</span><span class="p">)</span><span class="o">.</span><span class="n">upsert_one</span><span class="p">(</span><span class="o">**</span><span class="n">tmp</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># we have more than one we need to match method signatures</span>
+            <span class="k">for</span> <span class="n">ces</span> <span class="ow">in</span> <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">long_name__startswith</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">commit_id</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">file_id</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">ce_type</span><span class="o">=</span><span class="s1">&#39;method&#39;</span><span class="p">):</span>
+
+                <span class="c1"># we just remove dots, $ and / from params in this so that we have a chance to match against our match_long_name</span>
+                <span class="n">match_long_name2</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">get_sm_long_name2</span><span class="p">(</span><span class="n">ces</span><span class="o">.</span><span class="n">long_name</span><span class="p">)</span>
+
+                <span class="c1"># new way:, first one is with long = J second with long = L</span>
+                <span class="c1"># does not work with_ org.apache.zookeeper.server.quorum.Zab1_0Test$5.proposeNewSession(LQuorumPacket;LL)V</span>
+                <span class="c1"># this gets merged to org.apache.zookeeper.server.quorum.Zab1_0Test$5.proposeNewSession(LQuorumPacket;LL;)V</span>
+                <span class="c1"># therefore we include the original long name</span>
+                <span class="k">if</span> <span class="n">match_long_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">match_long_name2</span> <span class="ow">or</span> <span class="n">match_long_name</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">match_long_name2</span> <span class="ow">or</span> <span class="n">ces</span><span class="o">.</span><span class="n">long_name</span> <span class="ow">in</span> <span class="n">match_long_name</span><span class="p">:</span>
+
+                    <span class="n">long_name</span> <span class="o">=</span> <span class="n">ces</span><span class="o">.</span><span class="n">long_name</span>
+
+                    <span class="n">s_key</span> <span class="o">=</span> <span class="n">get_code_entity_state_identifier</span><span class="p">(</span><span class="n">long_name</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+                    <span class="n">tmp</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;set__metrics__cognitive_complexity_sonar&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;cognitive_complexity_sonar&#39;</span><span class="p">]</span>
+                    <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;set__metrics__cyclomatic_complexity_test&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;cyclomatic_complexity&#39;</span><span class="p">]</span>
+
+                    <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="p">(</span><span class="n">s_key</span><span class="o">=</span><span class="n">s_key</span><span class="p">)</span><span class="o">.</span><span class="n">upsert_one</span><span class="p">(</span><span class="o">**</span><span class="n">tmp</span><span class="p">)</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;[NO MATCH] have: path: </span><span class="si">{}</span><span class="s1">, params: </span><span class="si">{}</span><span class="s1">, return_type: </span><span class="si">{}</span><span class="s1">, merged long_name: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;parameter_types&#39;</span><span class="p">],</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;return_type&#39;</span><span class="p">],</span> <span class="n">match_long_name</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">c1</span> <span class="ow">in</span> <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">long_name__startswith</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">commit_id</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">file_id</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">ce_type</span><span class="o">=</span><span class="s1">&#39;method&#39;</span><span class="p">):</span>
+                    <span class="n">param</span><span class="p">,</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">get_sm_params</span><span class="p">(</span><span class="n">c1</span><span class="o">.</span><span class="n">long_name</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;[NO MATCH] searched: long_name: </span><span class="si">{}</span><span class="s1">, params: </span><span class="si">{}</span><span class="s1">, return_type: </span><span class="si">{}</span><span class="s1">, merged long_name: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">c1</span><span class="o">.</span><span class="n">long_name</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">ret</span><span class="p">,</span> <span class="n">match_long_name2</span><span class="p">))</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Alexander Trautsch
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

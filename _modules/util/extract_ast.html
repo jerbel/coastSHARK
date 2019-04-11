@@ -1,0 +1,416 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>util.extract_ast &mdash; coastSHARK 2.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> coastSHARK
+          
+
+          
+            
+            <img src="../../_static/SmartSHARK_read_the_docs_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">1. Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../extension.html">2. How to Extend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plugin_packaging.html">3. Plugin Packaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">4. API Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">coastSHARK</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>util.extract_ast</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for util.extract_ast</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;This module contains the AST node types and the classes for extracting them from Java and Python.</span>
+
+<span class="sd">The most important classes here are ExtractAstPython and ExtractAstJava.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">ast</span>
+
+<span class="kn">from</span> <span class="nn">lib2to3</span> <span class="k">import</span> <span class="n">refactor</span><span class="p">,</span> <span class="n">pgen2</span>
+
+<span class="kn">import</span> <span class="nn">javalang</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">error</span>
+<span class="kn">from</span> <span class="nn">.complexity_java</span> <span class="k">import</span> <span class="n">ComplexityJava</span>
+
+<span class="c1"># for python</span>
+<span class="c1"># https://docs.python.org/3/library/ast.html</span>
+<span class="c1"># node types from: http://greentreesnakes.readthedocs.io/en/latest/nodes.html</span>
+<span class="n">PYTHON_NODE_TYPES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Num&#39;</span><span class="p">,</span> <span class="s1">&#39;Str&#39;</span><span class="p">,</span> <span class="s1">&#39;Bytes&#39;</span><span class="p">,</span> <span class="s1">&#39;List&#39;</span><span class="p">,</span> <span class="s1">&#39;Tuple&#39;</span><span class="p">,</span> <span class="s1">&#39;Set&#39;</span><span class="p">,</span> <span class="s1">&#39;Dict&#39;</span><span class="p">,</span> <span class="s1">&#39;Ellipsis&#39;</span><span class="p">,</span> <span class="s1">&#39;NameConstant&#39;</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">,</span> <span class="s1">&#39;Load&#39;</span><span class="p">,</span> <span class="s1">&#39;Store&#39;</span><span class="p">,</span> <span class="s1">&#39;Del&#39;</span><span class="p">,</span> <span class="s1">&#39;Starred&#39;</span><span class="p">,</span> <span class="s1">&#39;Expr&#39;</span><span class="p">,</span> <span class="s1">&#39;UnaryOp&#39;</span><span class="p">,</span> <span class="s1">&#39;UAdd&#39;</span><span class="p">,</span> <span class="s1">&#39;USub&#39;</span><span class="p">,</span> <span class="s1">&#39;Not&#39;</span><span class="p">,</span> <span class="s1">&#39;Invert&#39;</span><span class="p">,</span> <span class="s1">&#39;BinOp&#39;</span><span class="p">,</span> <span class="s1">&#39;Add&#39;</span><span class="p">,</span> <span class="s1">&#39;Sub&#39;</span><span class="p">,</span> <span class="s1">&#39;Mult&#39;</span><span class="p">,</span> <span class="s1">&#39;Div&#39;</span><span class="p">,</span> <span class="s1">&#39;FloorDiv&#39;</span><span class="p">,</span> <span class="s1">&#39;Mod&#39;</span><span class="p">,</span> <span class="s1">&#39;Pow&#39;</span><span class="p">,</span> <span class="s1">&#39;LShift&#39;</span><span class="p">,</span> <span class="s1">&#39;RShift&#39;</span><span class="p">,</span> <span class="s1">&#39;BitOr&#39;</span><span class="p">,</span> <span class="s1">&#39;BitXor&#39;</span><span class="p">,</span> <span class="s1">&#39;BitAnd&#39;</span><span class="p">,</span> <span class="s1">&#39;MatMult&#39;</span><span class="p">,</span> <span class="s1">&#39;BoolOp&#39;</span><span class="p">,</span> <span class="s1">&#39;And&#39;</span><span class="p">,</span> <span class="s1">&#39;Or&#39;</span><span class="p">,</span> <span class="s1">&#39;Compare&#39;</span><span class="p">,</span> <span class="s1">&#39;Eq&#39;</span><span class="p">,</span> <span class="s1">&#39;NotEq&#39;</span><span class="p">,</span> <span class="s1">&#39;Lt&#39;</span><span class="p">,</span> <span class="s1">&#39;LtE&#39;</span><span class="p">,</span> <span class="s1">&#39;Gt&#39;</span><span class="p">,</span> <span class="s1">&#39;GtE&#39;</span><span class="p">,</span> <span class="s1">&#39;Is&#39;</span><span class="p">,</span> <span class="s1">&#39;IsNot&#39;</span><span class="p">,</span> <span class="s1">&#39;In&#39;</span><span class="p">,</span> <span class="s1">&#39;NotIn&#39;</span><span class="p">,</span> <span class="s1">&#39;Call&#39;</span><span class="p">,</span> <span class="s1">&#39;keyword&#39;</span><span class="p">,</span> <span class="s1">&#39;IfExp&#39;</span><span class="p">,</span> <span class="s1">&#39;Attribute&#39;</span><span class="p">,</span> <span class="s1">&#39;Subscript&#39;</span><span class="p">,</span> <span class="s1">&#39;Index&#39;</span><span class="p">,</span> <span class="s1">&#39;Slice&#39;</span><span class="p">,</span> <span class="s1">&#39;ExtSlice&#39;</span><span class="p">,</span> <span class="s1">&#39;ListComp&#39;</span><span class="p">,</span> <span class="s1">&#39;SetComp&#39;</span><span class="p">,</span> <span class="s1">&#39;GeneratorExp&#39;</span><span class="p">,</span> <span class="s1">&#39;DictComp&#39;</span><span class="p">,</span> <span class="s1">&#39;comprehension&#39;</span><span class="p">,</span> <span class="s1">&#39;Assign&#39;</span><span class="p">,</span> <span class="s1">&#39;AugAssign&#39;</span><span class="p">,</span> <span class="s1">&#39;Print&#39;</span><span class="p">,</span> <span class="s1">&#39;Raise&#39;</span><span class="p">,</span> <span class="s1">&#39;Assert&#39;</span><span class="p">,</span> <span class="s1">&#39;Delete&#39;</span><span class="p">,</span> <span class="s1">&#39;Pass&#39;</span><span class="p">,</span> <span class="s1">&#39;Import&#39;</span><span class="p">,</span> <span class="s1">&#39;ImportFrom&#39;</span><span class="p">,</span> <span class="s1">&#39;alias&#39;</span><span class="p">,</span> <span class="s1">&#39;Module&#39;</span><span class="p">]</span>
+
+<span class="c1"># control flow</span>
+<span class="n">PYTHON_NODE_TYPES</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;If&#39;</span><span class="p">,</span> <span class="s1">&#39;For&#39;</span><span class="p">,</span> <span class="s1">&#39;While&#39;</span><span class="p">,</span> <span class="s1">&#39;Break&#39;</span><span class="p">,</span> <span class="s1">&#39;Continue&#39;</span><span class="p">,</span> <span class="s1">&#39;Try&#39;</span><span class="p">,</span> <span class="s1">&#39;TryFinally&#39;</span><span class="p">,</span> <span class="s1">&#39;TryExcept&#39;</span><span class="p">,</span> <span class="s1">&#39;ExceptHandler&#39;</span><span class="p">,</span> <span class="s1">&#39;With&#39;</span><span class="p">,</span> <span class="s1">&#39;withitem&#39;</span><span class="p">]</span>
+
+<span class="c1"># function and class defs</span>
+<span class="n">PYTHON_NODE_TYPES</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;FunctionDef&#39;</span><span class="p">,</span> <span class="s1">&#39;Lambda&#39;</span><span class="p">,</span> <span class="s1">&#39;arguments&#39;</span><span class="p">,</span> <span class="s1">&#39;arg&#39;</span><span class="p">,</span> <span class="s1">&#39;Return&#39;</span><span class="p">,</span> <span class="s1">&#39;Yield&#39;</span><span class="p">,</span> <span class="s1">&#39;YieldFrom&#39;</span><span class="p">,</span> <span class="s1">&#39;Global&#39;</span><span class="p">,</span> <span class="s1">&#39;Nonlocal&#39;</span><span class="p">,</span> <span class="s1">&#39;ClassDef&#39;</span><span class="p">]</span>
+
+<span class="c1"># new async stuff (python 3.5)</span>
+<span class="n">PYTHON_NODE_TYPES</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;AsyncFunctionDef&#39;</span><span class="p">,</span> <span class="s1">&#39;Await&#39;</span><span class="p">,</span> <span class="s1">&#39;AsyncFor&#39;</span><span class="p">,</span> <span class="s1">&#39;AsyncWith&#39;</span><span class="p">]</span>
+
+<span class="c1"># for java</span>
+<span class="c1"># node types from: https://github.com/c2nes/javalang/blob/master/javalang/tree.py</span>
+<span class="n">JAVA_NODE_TYPES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;CompilationUnit&#39;</span><span class="p">,</span> <span class="s1">&#39;Import&#39;</span><span class="p">,</span> <span class="s1">&#39;Documented&#39;</span><span class="p">,</span> <span class="s1">&#39;Declaration&#39;</span><span class="p">,</span> <span class="s1">&#39;TypeDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;PackageDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;ClassDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;EnumDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;InterfaceDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;AnnotationDeclaration&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Type&#39;</span><span class="p">,</span> <span class="s1">&#39;BasicType&#39;</span><span class="p">,</span> <span class="s1">&#39;ReferenceType&#39;</span><span class="p">,</span> <span class="s1">&#39;TypeArgument&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;TypeParameter&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Annotation&#39;</span><span class="p">,</span> <span class="s1">&#39;ElementValuePair&#39;</span><span class="p">,</span> <span class="s1">&#39;ElementArrayValue&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Member&#39;</span><span class="p">,</span> <span class="s1">&#39;MethodDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;FieldDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;ConstructorDeclaration&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ConstantDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;ArrayInitializer&#39;</span><span class="p">,</span> <span class="s1">&#39;VariableDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;LocalVariableDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;FormalParameter&#39;</span><span class="p">,</span> <span class="s1">&#39;InferredFormalParameter&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Statement&#39;</span><span class="p">,</span> <span class="s1">&#39;IfStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;WhileStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;DoStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;ForStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;AssertStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;BreakStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;ContinueStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;ReturnStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;ThrowStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;SynchronizedStatement&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;TryStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;SwitchStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;BlockStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;StatementExpression&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;TryResource&#39;</span><span class="p">,</span> <span class="s1">&#39;CatchClause&#39;</span><span class="p">,</span> <span class="s1">&#39;CatchClauseParameter&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;SwitchStatementCase&#39;</span><span class="p">,</span> <span class="s1">&#39;ForControl&#39;</span><span class="p">,</span> <span class="s1">&#39;EnhancedForControl&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Expression&#39;</span><span class="p">,</span> <span class="s1">&#39;Assignment&#39;</span><span class="p">,</span> <span class="s1">&#39;TernaryExpression&#39;</span><span class="p">,</span> <span class="s1">&#39;BinaryOperation&#39;</span><span class="p">,</span> <span class="s1">&#39;Cast&#39;</span><span class="p">,</span> <span class="s1">&#39;MethodReference&#39;</span><span class="p">,</span> <span class="s1">&#39;LambdaExpression&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Primary&#39;</span><span class="p">,</span> <span class="s1">&#39;Literal&#39;</span><span class="p">,</span> <span class="s1">&#39;This&#39;</span><span class="p">,</span> <span class="s1">&#39;MemberReference&#39;</span><span class="p">,</span> <span class="s1">&#39;Invocation&#39;</span><span class="p">,</span> <span class="s1">&#39;ExplicitConstructorInvocation&#39;</span><span class="p">,</span> <span class="s1">&#39;SuperConstructorInvocation&#39;</span><span class="p">,</span> <span class="s1">&#39;MethodInvocation&#39;</span><span class="p">,</span> <span class="s1">&#39;SuperMethodInvocation&#39;</span><span class="p">,</span> <span class="s1">&#39;SuperMemberReference&#39;</span><span class="p">,</span> <span class="s1">&#39;ArraySelector&#39;</span><span class="p">,</span> <span class="s1">&#39;ClassReference&#39;</span><span class="p">,</span> <span class="s1">&#39;VoidClassReference&#39;</span><span class="p">,</span> <span class="s1">&#39;VariableDeclarator&#39;</span><span class="p">,</span> <span class="s1">&#39;ClassCreator&#39;</span><span class="p">,</span> <span class="s1">&#39;ArrayCreator&#39;</span><span class="p">,</span> <span class="s1">&#39;InnerClassCreator&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;EnumBody&#39;</span><span class="p">,</span> <span class="s1">&#39;EnumConstantDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;AnnotationMethod&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<span class="c1"># https://docs.python.org/3/library/2to3.html</span>
+<div class="viewcode-block" id="convert_2to3"><a class="viewcode-back" href="../../api.html#util.extract_ast.convert_2to3">[docs]</a><span class="k">def</span> <span class="nf">convert_2to3</span><span class="p">(</span><span class="n">file_content</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Quick helper function to convert python2 to python3 so that we can keep the ast buildin.&quot;&quot;&quot;</span>
+
+    <span class="c1"># all default fixers</span>
+    <span class="n">avail_fixes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">refactor</span><span class="o">.</span><span class="n">get_fixers_from_package</span><span class="p">(</span><span class="s2">&quot;lib2to3.fixes&quot;</span><span class="p">))</span>
+
+    <span class="c1"># create default RefactoringTool, apply to passed file_content string and return fixed string</span>
+    <span class="n">rt</span> <span class="o">=</span> <span class="n">refactor</span><span class="o">.</span><span class="n">RefactoringTool</span><span class="p">(</span><span class="n">avail_fixes</span><span class="p">)</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">rt</span><span class="o">.</span><span class="n">refactor_string</span><span class="p">(</span><span class="n">file_content</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="NodePathVisitor"><a class="viewcode-back" href="../../api.html#util.extract_ast.NodePathVisitor">[docs]</a><span class="k">class</span> <span class="nc">NodePathVisitor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Overwrite ast.NodeVisitor because we also want the level for pretty printing.</span>
+
+<span class="sd">    This just includes the level for the NodePrintVisitor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="NodePathVisitor.visit"><a class="viewcode-back" href="../../api.html#util.extract_ast.NodePathVisitor.visit">[docs]</a>    <span class="k">def</span> <span class="nf">visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Visit a node.&quot;&quot;&quot;</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;visit_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="n">visitor</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">generic_visit</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">visitor</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="NodePathVisitor.generic_visit"><a class="viewcode-back" href="../../api.html#util.extract_ast.NodePathVisitor.generic_visit">[docs]</a>    <span class="k">def</span> <span class="nf">generic_visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Called if no explicit visitor function exists for a node.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">ast</span><span class="o">.</span><span class="n">iter_fields</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">AST</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">AST</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="NodePrintVisitor"><a class="viewcode-back" href="../../api.html#util.extract_ast.NodePrintVisitor">[docs]</a><span class="k">class</span> <span class="nc">NodePrintVisitor</span><span class="p">(</span><span class="n">NodePathVisitor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Prints AST incl. depth.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="NodePrintVisitor.generic_visit"><a class="viewcode-back" href="../../api.html#util.extract_ast.NodePrintVisitor.generic_visit">[docs]</a>    <span class="k">def</span> <span class="nf">generic_visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">name</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> (</span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span> <span class="o">*</span> <span class="n">level</span> <span class="o">+</span> <span class="n">out</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">generic_visit</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="NodeTypeCountVisitor"><a class="viewcode-back" href="../../api.html#util.extract_ast.NodeTypeCountVisitor">[docs]</a><span class="k">class</span> <span class="nc">NodeTypeCountVisitor</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">NodeVisitor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Used to count imports, node types and nodes for Python.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_counts</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">PYTHON_NODE_TYPES</span><span class="p">}</span>  <span class="c1"># set 0 for every known type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">imports</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<div class="viewcode-block" id="NodeTypeCountVisitor.generic_visit"><a class="viewcode-back" href="../../api.html#util.extract_ast.NodeTypeCountVisitor.generic_visit">[docs]</a>    <span class="k">def</span> <span class="nf">generic_visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="n">type_name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">type_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_counts</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">type_counts</span><span class="p">[</span><span class="n">type_name</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># if we encounter an unknown node we have to raise an error because then our vector length is not right</span>
+            <span class="k">raise</span> <span class="n">error</span><span class="o">.</span><span class="n">CoastException</span><span class="p">(</span><span class="s2">&quot;Unkown NodeType encountered: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">type_name</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">type_name</span> <span class="o">==</span> <span class="s1">&#39;Import&#39;</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;names&#39;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">imports</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># from datetime import date -&gt; import datetime.date</span>
+        <span class="k">if</span> <span class="n">type_name</span> <span class="o">==</span> <span class="s1">&#39;ImportFrom&#39;</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;names&#39;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="n">module</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;module&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">imports</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">n</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">generic_visit</span><span class="p">(</span><span class="n">node</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="ExtractAstJava"><a class="viewcode-back" href="../../api.html#util.extract_ast.ExtractAstJava">[docs]</a><span class="k">class</span> <span class="nc">ExtractAstJava</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Extracts the AST from .java Files.</span>
+
+<span class="sd">    Uses the javalang Library.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">astdata</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">imports</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_counts</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">JAVA_NODE_TYPES</span><span class="p">}</span>  <span class="c1"># set 0 for every known type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span>
+
+    <span class="k">def</span> <span class="nf">method_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># new complexity metrics</span>
+        <span class="n">cj</span> <span class="o">=</span> <span class="n">ComplexityJava</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">astdata</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">cj</span><span class="o">.</span><span class="n">cognitive_complexity</span><span class="p">())</span>  <span class="c1"># we list() here because cognitive_complexity is a generator</span>
+
+<div class="viewcode-block" id="ExtractAstJava.load"><a class="viewcode-back" href="../../api.html#util.extract_ast.ExtractAstJava.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the AST.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;latin-1&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>  <span class="c1"># latin-1 because we assume no crazy umlaut function names</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">astdata</span> <span class="o">=</span> <span class="n">javalang</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+        <span class="k">except</span> <span class="n">javalang</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">JavaSyntaxError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="s1">&#39;Parser Error in file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">error</span><span class="o">.</span><span class="n">ParserException</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="n">javalang</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">LexerError</span> <span class="k">as</span> <span class="n">le</span><span class="p">:</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="s1">&#39;Lexer Error in file: </span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="n">le</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">error</span><span class="o">.</span><span class="n">ParserException</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">astdata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">astdata</span><span class="o">.</span><span class="n">walk_tree_iterative</span><span class="p">():</span>
+            <span class="n">type_name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">node_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">type_name</span> <span class="o">==</span> <span class="s1">&#39;CompilationUnit&#39;</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">imp</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;imports&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+                    <span class="n">import_line</span> <span class="o">=</span> <span class="n">imp</span><span class="o">.</span><span class="n">path</span>
+                    <span class="k">if</span> <span class="n">imp</span><span class="o">.</span><span class="n">wildcard</span><span class="p">:</span>
+                        <span class="n">import_line</span> <span class="o">+=</span> <span class="s1">&#39;.*&#39;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">imports</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">import_line</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">type_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_counts</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">type_counts</span><span class="p">[</span><span class="n">type_name</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">error</span><span class="o">.</span><span class="n">CoastException</span><span class="p">(</span><span class="s2">&quot;Unknown NodeType encountered: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">type_name</span><span class="p">))</span></div></div>
+
+
+<div class="viewcode-block" id="ExtractAstPython"><a class="viewcode-back" href="../../api.html#util.extract_ast.ExtractAstPython">[docs]</a><span class="k">class</span> <span class="nc">ExtractAstPython</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Extracts the AST from .py Files.</span>
+
+<span class="sd">    Uses the build in ast and the visitor pattern.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">astdata</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span>
+
+<div class="viewcode-block" id="ExtractAstPython.load"><a class="viewcode-back" href="../../api.html#util.extract_ast.ExtractAstPython.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the AST.</span>
+
+<span class="sd">        We add a \n at the end because 2to3 dies otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;latin-1&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">astdata</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">convert_2to3</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">),</span> <span class="n">filename</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">astdata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">nt</span> <span class="o">=</span> <span class="n">NodeTypeCountVisitor</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nt</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">astdata</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">pgen2</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">ParseError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="s1">&#39;Parser Error in file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">error</span><span class="o">.</span><span class="n">ParserException</span><span class="p">(</span><span class="n">err</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">imports</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt</span><span class="o">.</span><span class="n">imports</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">type_counts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt</span><span class="o">.</span><span class="n">type_counts</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">node_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt</span><span class="o">.</span><span class="n">node_count</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Alexander Trautsch
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

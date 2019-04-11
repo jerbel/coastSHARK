@@ -1,0 +1,418 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>4. API Documentation &mdash; coastSHARK 2.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="3. Plugin Packaging" href="plugin_packaging.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> coastSHARK
+          
+
+          
+            
+            <img src="_static/SmartSHARK_read_the_docs_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">1. Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="extension.html">2. How to Extend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugin_packaging.html">3. Plugin Packaging</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">4. API Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-util.extract_ast">4.1. util.extract_ast</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#util-complexity-java">4.2. util.complexity_java</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-util.write_mongo">4.3. util.write_mongo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-smartshark_plugin">4.4. smartshark_plugin</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">coastSHARK</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>4. API Documentation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="api-documentation">
+<h1>4. API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h1>
+<p>The 2 main modules of <em>coastSHARK</em> at the moment are the <a class="reference internal" href="#module-util.extract_ast" title="util.extract_ast"><code class="xref any py py-mod docutils literal notranslate"><span class="pre">extract_ast.py</span></code></a> and <a class="reference internal" href="#module-smartshark_plugin" title="smartshark_plugin"><code class="xref any py py-mod docutils literal notranslate"><span class="pre">smartshark_plugin.py</span></code></a>.
+The first contains all classes used for AST extraction and the latter contains the code for recursively finding the files in the folder, calling the classes from extract_ast.py and then saving them in the MongoDB. In version 1.0.1 the <a class="reference internal" href="#module-util.complexity_java" title="util.complexity_java"><code class="xref any py py-mod docutils literal notranslate"><span class="pre">complexity_java.py</span></code></a> module was added.
+It uses the already extracted AST to compute method complexity metrics.</p>
+<p>For saving the information into the MongoDB the <a class="reference internal" href="#module-util.write_mongo" title="util.write_mongo"><code class="xref any py py-mod docutils literal notranslate"><span class="pre">util.write_mongo</span></code></a> module contains a class that wraps the code for the operations on the <a class="reference external" href="https://github.com/smartshark/pycoSHARK">pycoshark</a> models.</p>
+<div class="section" id="module-util.extract_ast">
+<span id="util-extract-ast"></span><h2>4.1. util.extract_ast<a class="headerlink" href="#module-util.extract_ast" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the AST node types and the classes for extracting them from Java and Python.</p>
+<p>The most important classes here are ExtractAstPython and ExtractAstJava.</p>
+<dl class="class">
+<dt id="util.extract_ast.ExtractAstJava">
+<em class="property">class </em><code class="descclassname">util.extract_ast.</code><code class="descname">ExtractAstJava</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/extract_ast.html#ExtractAstJava"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.ExtractAstJava" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extracts the AST from .java Files.</p>
+<p>Uses the javalang Library.</p>
+<dl class="method">
+<dt id="util.extract_ast.ExtractAstJava.load">
+<code class="descname">load</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/extract_ast.html#ExtractAstJava.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.ExtractAstJava.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read the AST.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="util.extract_ast.ExtractAstPython">
+<em class="property">class </em><code class="descclassname">util.extract_ast.</code><code class="descname">ExtractAstPython</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/extract_ast.html#ExtractAstPython"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.ExtractAstPython" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extracts the AST from .py Files.</p>
+<p>Uses the build in ast and the visitor pattern.</p>
+<dl class="method">
+<dt id="util.extract_ast.ExtractAstPython.load">
+<code class="descname">load</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/extract_ast.html#ExtractAstPython.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.ExtractAstPython.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read the AST.</p>
+<blockquote>
+<div><p>We add a</p>
+</div></blockquote>
+<p>at the end because 2to3 dies otherwise.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="util.extract_ast.NodePathVisitor">
+<em class="property">class </em><code class="descclassname">util.extract_ast.</code><code class="descname">NodePathVisitor</code><a class="reference internal" href="_modules/util/extract_ast.html#NodePathVisitor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.NodePathVisitor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwrite ast.NodeVisitor because we also want the level for pretty printing.</p>
+<p>This just includes the level for the NodePrintVisitor.</p>
+<dl class="method">
+<dt id="util.extract_ast.NodePathVisitor.generic_visit">
+<code class="descname">generic_visit</code><span class="sig-paren">(</span><em>node</em>, <em>level</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/extract_ast.html#NodePathVisitor.generic_visit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.NodePathVisitor.generic_visit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called if no explicit visitor function exists for a node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="util.extract_ast.NodePathVisitor.visit">
+<code class="descname">visit</code><span class="sig-paren">(</span><em>node</em>, <em>level=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/extract_ast.html#NodePathVisitor.visit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.NodePathVisitor.visit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visit a node.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="util.extract_ast.NodePrintVisitor">
+<em class="property">class </em><code class="descclassname">util.extract_ast.</code><code class="descname">NodePrintVisitor</code><a class="reference internal" href="_modules/util/extract_ast.html#NodePrintVisitor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.NodePrintVisitor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints AST incl. depth.</p>
+<dl class="method">
+<dt id="util.extract_ast.NodePrintVisitor.generic_visit">
+<code class="descname">generic_visit</code><span class="sig-paren">(</span><em>node</em>, <em>level</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/extract_ast.html#NodePrintVisitor.generic_visit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.NodePrintVisitor.generic_visit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called if no explicit visitor function exists for a node.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="util.extract_ast.NodeTypeCountVisitor">
+<em class="property">class </em><code class="descclassname">util.extract_ast.</code><code class="descname">NodeTypeCountVisitor</code><a class="reference internal" href="_modules/util/extract_ast.html#NodeTypeCountVisitor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.NodeTypeCountVisitor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to count imports, node types and nodes for Python.</p>
+<dl class="method">
+<dt id="util.extract_ast.NodeTypeCountVisitor.generic_visit">
+<code class="descname">generic_visit</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/extract_ast.html#NodeTypeCountVisitor.generic_visit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.NodeTypeCountVisitor.generic_visit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called if no explicit visitor function exists for a node.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="util.extract_ast.convert_2to3">
+<code class="descclassname">util.extract_ast.</code><code class="descname">convert_2to3</code><span class="sig-paren">(</span><em>file_content</em>, <em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/extract_ast.html#convert_2to3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.extract_ast.convert_2to3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Quick helper function to convert python2 to python3 so that we can keep the ast buildin.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="util-complexity-java">
+<h2>4.2. util.complexity_java<a class="headerlink" href="#util-complexity-java" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-util.complexity_java"></span><p>In this module we extract complexity measures from Java ASTs.</p>
+<dl class="class">
+<dt id="util.complexity_java.ComplexityJava">
+<em class="property">class </em><code class="descclassname">util.complexity_java.</code><code class="descname">ComplexityJava</code><span class="sig-paren">(</span><em>compilation_unit_ast</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/complexity_java.html#ComplexityJava"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.complexity_java.ComplexityJava" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extracts complexity measures from the AST.</p>
+<dl class="method">
+<dt id="util.complexity_java.ComplexityJava.cognitive_complexity">
+<code class="descname">cognitive_complexity</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/complexity_java.html#ComplexityJava.cognitive_complexity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.complexity_java.ComplexityJava.cognitive_complexity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract complexity metrics for all methods of the current file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="util.complexity_java.ComplexityJava.cognitive_complexity_sonar">
+<code class="descname">cognitive_complexity_sonar</code><span class="sig-paren">(</span><em>method</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/complexity_java.html#ComplexityJava.cognitive_complexity_sonar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.complexity_java.ComplexityJava.cognitive_complexity_sonar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract cognitive complexity.</p>
+<p>Description here: <a class="reference external" href="https://www.sonarsource.com/docs/CognitiveComplexity.pdf">https://www.sonarsource.com/docs/CognitiveComplexity.pdf</a></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="util.complexity_java.ComplexityJava.cyclomatic_complexity">
+<code class="descname">cyclomatic_complexity</code><span class="sig-paren">(</span><em>method</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/complexity_java.html#ComplexityJava.cyclomatic_complexity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.complexity_java.ComplexityJava.cyclomatic_complexity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract cyclomatic complexity (not really, we just count branch types).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="util.complexity_java.SourcemeterConversion">
+<em class="property">class </em><code class="descclassname">util.complexity_java.</code><code class="descname">SourcemeterConversion</code><a class="reference internal" href="_modules/util/complexity_java.html#SourcemeterConversion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.complexity_java.SourcemeterConversion" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a utility class for matching against Sourcemeter long_names.</p>
+<dl class="method">
+<dt id="util.complexity_java.SourcemeterConversion.get_sm_long_name">
+<code class="descname">get_sm_long_name</code><span class="sig-paren">(</span><em>method</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/complexity_java.html#SourcemeterConversion.get_sm_long_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.complexity_java.SourcemeterConversion.get_sm_long_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a collapsed Sourcemeter long_name from our own method data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="util.complexity_java.SourcemeterConversion.get_sm_long_name2">
+<code class="descname">get_sm_long_name2</code><span class="sig-paren">(</span><em>long_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/complexity_java.html#SourcemeterConversion.get_sm_long_name2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.complexity_java.SourcemeterConversion.get_sm_long_name2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a collapsed Sourcemeter long_name.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="util.complexity_java.SourcemeterConversion.get_sm_params">
+<code class="descname">get_sm_params</code><span class="sig-paren">(</span><em>long_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/complexity_java.html#SourcemeterConversion.get_sm_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.complexity_java.SourcemeterConversion.get_sm_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take a Sourcemeter long_name for a method and return a Mapping to our method parameter types and return types.</p>
+<p>This is used to match overloaded functions.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-util.write_mongo">
+<span id="util-write-mongo"></span><h2>4.3. util.write_mongo<a class="headerlink" href="#module-util.write_mongo" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="util.write_mongo.MongoDb">
+<em class="property">class </em><code class="descclassname">util.write_mongo.</code><code class="descname">MongoDb</code><span class="sig-paren">(</span><em>database</em>, <em>user</em>, <em>password</em>, <em>host</em>, <em>port</em>, <em>authentication</em>, <em>ssl</em>, <em>project_name</em>, <em>vcs_url</em>, <em>revision</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/write_mongo.html#MongoDb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.write_mongo.MongoDb" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class just wraps the Mongo connection code and the query for fetching the correct CodeEntityState for inserting the AST information.</p>
+<dl class="method">
+<dt id="util.write_mongo.MongoDb.write_imports">
+<code class="descname">write_imports</code><span class="sig-paren">(</span><em>filepath</em>, <em>imports</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/write_mongo.html#MongoDb.write_imports"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.write_mongo.MongoDb.write_imports" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write imports to code_entity_states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>str</em>) – The full path of this file.</p></li>
+<li><p><strong>imports</strong> (<em>list</em>) – A list of strings containing the imports.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="util.write_mongo.MongoDb.write_method_metrics">
+<code class="descname">write_method_metrics</code><span class="sig-paren">(</span><em>filepath</em>, <em>method_data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/write_mongo.html#MongoDb.write_method_metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.write_mongo.MongoDb.write_method_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write additional method metrics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>str</em>) – The full path of this file.</p></li>
+<li><p><strong>method_data</strong> (<em>dict</em>) – The extracted method metrics.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="util.write_mongo.MongoDb.write_node_type_counts">
+<code class="descname">write_node_type_counts</code><span class="sig-paren">(</span><em>filepath</em>, <em>node_count</em>, <em>node_type_counts</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/util/write_mongo.html#MongoDb.write_node_type_counts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#util.write_mongo.MongoDb.write_node_type_counts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write AST bag-of-words and number of AST nodes for this file to code_entity_states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>str</em>) – The full path of this file.</p></li>
+<li><p><strong>node_count</strong> (<em>int</em>) – The number of AST nodes.</p></li>
+<li><p><strong>node_type_counts</strong> (<em>dict</em>) – The number for each type of AST node.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-smartshark_plugin">
+<span id="smartshark-plugin"></span><h2>4.4. smartshark_plugin<a class="headerlink" href="#module-smartshark_plugin" title="Permalink to this headline">¶</a></h2>
+<p>Plugin for execution with serverSHARK.</p>
+<dl class="function">
+<dt id="smartshark_plugin.main">
+<code class="descclassname">smartshark_plugin.</code><code class="descname">main</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/smartshark_plugin.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smartshark_plugin.main" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="plugin_packaging.html" class="btn btn-neutral float-left" title="3. Plugin Packaging" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Alexander Trautsch
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

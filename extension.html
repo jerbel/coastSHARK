@@ -1,0 +1,220 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>2. How to Extend &mdash; coastSHARK 2.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="3. Plugin Packaging" href="plugin_packaging.html" />
+    <link rel="prev" title="1. Intro" href="intro.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> coastSHARK
+          
+
+          
+            
+            <img src="_static/SmartSHARK_read_the_docs_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">1. Intro</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">2. How to Extend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugin_packaging.html">3. Plugin Packaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">4. API Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">coastSHARK</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>2. How to Extend</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/extension.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="how-to-extend">
+<h1>2. How to Extend<a class="headerlink" href="#how-to-extend" title="Permalink to this headline">¶</a></h1>
+<p><em>coastSHARK</em> is currently more a proof of concept like tool than a fully thought through extensible tool.
+Therefore, the extendability is not as good as it could be.</p>
+<p>Nevertheless, there are 2 ways in which coastSHARK can be extended.</p>
+<p>The first would be adding new languages that can be parsed.
+This would require in its simplest form a pure python parser for the language and the AST node types that can be extracted with the parser. The AST node types are required as currently we are building a bag-of-words with AST nodes.</p>
+<p>To add a new language parser would require adding it to <a class="reference internal" href="api.html#module-util.extract_ast" title="util.extract_ast"><code class="xref any py py-mod docutils literal notranslate"><span class="pre">util.extract_ast</span></code></a> and including a call to it in <a class="reference internal" href="api.html#module-smartshark_plugin" title="smartshark_plugin"><code class="xref any py py-mod docutils literal notranslate"><span class="pre">smartshark_plugin</span></code></a>.</p>
+<p>The second second method by which <em>coastSHARK</em> could be extended is by extracting more complex AST information than a bag-of-words of the nodes, e.g., a tree representation of just additional information like class names.</p>
+<p>This would also require changes in <a class="reference internal" href="api.html#module-util.extract_ast" title="util.extract_ast"><code class="xref any py py-mod docutils literal notranslate"><span class="pre">util.extract_ast</span></code></a> for the implementation, in <a class="reference internal" href="api.html#module-smartshark_plugin" title="smartshark_plugin"><code class="xref any py py-mod docutils literal notranslate"><span class="pre">smartshark_plugin</span></code></a> for the call and possibly in <a class="reference internal" href="api.html#module-util.write_mongo" title="util.write_mongo"><code class="xref any py py-mod docutils literal notranslate"><span class="pre">util.write_mongo</span></code></a> to write this information to the database.</p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="plugin_packaging.html" class="btn btn-neutral float-right" title="3. Plugin Packaging" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="intro.html" class="btn btn-neutral float-left" title="1. Intro" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Alexander Trautsch
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

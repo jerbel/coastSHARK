@@ -1,0 +1,718 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>util.complexity_java &mdash; coastSHARK 2.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> coastSHARK
+          
+
+          
+            
+            <img src="../../_static/SmartSHARK_read_the_docs_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">1. Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../extension.html">2. How to Extend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plugin_packaging.html">3. Plugin Packaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">4. API Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">coastSHARK</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>util.complexity_java</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for util.complexity_java</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;In this module we extract complexity measures from Java ASTs.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">import</span> <span class="nn">javalang</span>
+
+
+<span class="n">JAVA_BRANCH_TYPES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;IfStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;WhileStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;DoStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;ForStatement&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;SwitchStatement&#39;</span><span class="p">,</span>  <span class="c1"># &#39;SwitchStatementCase&#39;,</span>
+    <span class="s1">&#39;TernaryExpression&#39;</span>  <span class="c1"># , &#39;TryStatement&#39;,  cognitive_complexity_sonar does not increment nesting for TryStatement</span>
+<span class="p">]</span>
+
+<span class="n">JAVA_NESTING_TYPES</span> <span class="o">=</span> <span class="n">JAVA_BRANCH_TYPES</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;CatchClause&#39;</span><span class="p">]</span>
+
+<span class="n">JAVA_BRANCH_TYPES_MCCC</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;IfStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;WhileStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;DoStatement&#39;</span><span class="p">,</span> <span class="s1">&#39;ForStatement&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;SwitchStatementCase&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;TernaryExpression&#39;</span>  <span class="c1"># , &#39;TryStatement&#39;,  cognitive_complexity_sonar does not increment nesting for TryStatement</span>
+<span class="p">]</span>
+
+<span class="n">JAVA_SEQUENCE_TYPES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&amp;&amp;&#39;</span><span class="p">,</span> <span class="s1">&#39;||&#39;</span><span class="p">]</span>
+
+<span class="n">SM_DT</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;I&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;J&#39;</span><span class="p">:</span> <span class="s1">&#39;long&#39;</span><span class="p">,</span> <span class="s1">&#39;V&#39;</span><span class="p">:</span> <span class="s1">&#39;Void&#39;</span><span class="p">,</span> <span class="s1">&#39;Z&#39;</span><span class="p">:</span> <span class="s1">&#39;boolean&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="s1">&#39;char&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="s1">&#39;byte&#39;</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">:</span> <span class="s1">&#39;double&#39;</span><span class="p">}</span>
+
+<span class="n">SM_DT_INV</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">SM_DT</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+
+<div class="viewcode-block" id="SourcemeterConversion"><a class="viewcode-back" href="../../api.html#util.complexity_java.SourcemeterConversion">[docs]</a><span class="k">class</span> <span class="nc">SourcemeterConversion</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is a utility class for matching against Sourcemeter long_names.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;\(([\w,;,/,\$,\[]*)\)([\w,;,,\./,\$,\[]+)&#39;</span><span class="p">)</span>  <span class="c1"># used to map sourcemeter params and return code</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;coastSHARK&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_bracket</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">dt</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;[&#39;</span><span class="p">):</span>
+            <span class="n">dt</span> <span class="o">=</span> <span class="n">dt</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">dt</span><span class="p">,</span> <span class="n">count</span>
+
+<div class="viewcode-block" id="SourcemeterConversion.get_sm_long_name2"><a class="viewcode-back" href="../../api.html#util.complexity_java.SourcemeterConversion.get_sm_long_name2">[docs]</a>    <span class="k">def</span> <span class="nf">get_sm_long_name2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">long_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a collapsed Sourcemeter long_name.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_long_name</span> <span class="o">=</span> <span class="n">long_name</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">,</span> <span class="n">long_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;no match found for </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">long_name</span><span class="p">))</span>
+
+        <span class="n">ret</span><span class="p">,</span> <span class="n">bc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_bracket</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">ret</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">):</span>
+            <span class="n">pruned</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_l</span><span class="p">(</span><span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">pruned</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SM_DT_INV</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="n">SM_DT_INV</span><span class="p">[</span><span class="n">pruned</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_l</span><span class="p">(</span><span class="s1">&#39;L</span><span class="si">{}</span><span class="s1">;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pruned</span><span class="p">))</span>
+
+        <span class="n">plist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">rest_param</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">rest_param</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">rest_param</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;;&#39;</span><span class="p">:</span>
+            <span class="n">rest_param</span><span class="p">,</span> <span class="n">bc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_bracket</span><span class="p">(</span><span class="n">rest_param</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rest_param</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">):</span>
+                <span class="n">tmp</span> <span class="o">=</span> <span class="n">rest_param</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+                <span class="c1"># reattach the rest</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">rest_param</span> <span class="o">=</span> <span class="s1">&#39;;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="s1">&#39;;&#39;</span>  <span class="c1"># need to append ; again</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">rest_param</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="c1"># drop L, ; is already dropped</span>
+                <span class="n">pruned</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_l</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">:])</span>
+                <span class="k">if</span> <span class="n">pruned</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SM_DT_INV</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">r</span> <span class="o">=</span> <span class="n">SM_DT_INV</span><span class="p">[</span><span class="n">pruned</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+                    <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="n">r</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">pruned</span><span class="p">:</span>
+                        <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="s1">&#39;L</span><span class="si">{}</span><span class="s1">;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pruned</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="n">rest_param</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">rest_param</span> <span class="o">=</span> <span class="n">rest_param</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+        <span class="n">start</span> <span class="o">=</span> <span class="n">long_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">(</span><span class="si">{}</span><span class="s1">)</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">start</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">plist</span><span class="p">),</span> <span class="n">ret</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SourcemeterConversion.get_sm_long_name"><a class="viewcode-back" href="../../api.html#util.complexity_java.SourcemeterConversion.get_sm_long_name">[docs]</a>    <span class="k">def</span> <span class="nf">get_sm_long_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a collapsed Sourcemeter long_name from our own method data.&quot;&quot;&quot;</span>
+        <span class="n">ps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">method</span><span class="p">[</span><span class="s1">&#39;parameter_types&#39;</span><span class="p">]:</span>
+            <span class="n">pruned</span><span class="p">,</span> <span class="n">bc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_bracket</span><span class="p">(</span><span class="n">param</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">pruned</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SM_DT_INV</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">ps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="n">SM_DT_INV</span><span class="p">[</span><span class="n">pruned</span><span class="o">.</span><span class="n">lower</span><span class="p">()])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="s1">&#39;L</span><span class="si">{}</span><span class="s1">;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pruned</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">method</span><span class="p">[</span><span class="s1">&#39;return_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Void&#39;</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="s1">&#39;V&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pruned</span><span class="p">,</span> <span class="n">bc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_bracket</span><span class="p">(</span><span class="n">method</span><span class="p">[</span><span class="s1">&#39;return_type&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">pruned</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SM_DT_INV</span><span class="p">:</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="n">SM_DT_INV</span><span class="p">[</span><span class="n">pruned</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="s1">&#39;L</span><span class="si">{}</span><span class="s1">;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pruned</span><span class="p">)</span>
+
+        <span class="n">params1</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ps</span><span class="p">)</span>
+        <span class="n">params2</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;j&#39;</span><span class="p">:</span>
+                <span class="n">params2</span> <span class="o">+=</span> <span class="s1">&#39;L&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">params2</span> <span class="o">+=</span> <span class="n">p</span>
+
+        <span class="n">var1</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.</span><span class="si">{}</span><span class="s1">.</span><span class="si">{}</span><span class="s1">(</span><span class="si">{}</span><span class="s1">)</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">[</span><span class="s1">&#39;package_name&#39;</span><span class="p">],</span> <span class="n">method</span><span class="p">[</span><span class="s1">&#39;class_name&#39;</span><span class="p">],</span> <span class="n">method</span><span class="p">[</span><span class="s1">&#39;method_name&#39;</span><span class="p">],</span> <span class="n">params1</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
+        <span class="n">var2</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.</span><span class="si">{}</span><span class="s1">.</span><span class="si">{}</span><span class="s1">(</span><span class="si">{}</span><span class="s1">)</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">[</span><span class="s1">&#39;package_name&#39;</span><span class="p">],</span> <span class="n">method</span><span class="p">[</span><span class="s1">&#39;class_name&#39;</span><span class="p">],</span> <span class="n">method</span><span class="p">[</span><span class="s1">&#39;method_name&#39;</span><span class="p">],</span> <span class="n">params2</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">var1</span><span class="p">,</span> <span class="n">var2</span></div>
+
+<div class="viewcode-block" id="SourcemeterConversion.get_sm_params"><a class="viewcode-back" href="../../api.html#util.complexity_java.SourcemeterConversion.get_sm_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_sm_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">long_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Take a Sourcemeter long_name for a method and return a Mapping to our method parameter types and return types.</span>
+
+<span class="sd">        This is used to match overloaded functions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_long_name</span> <span class="o">=</span> <span class="n">long_name</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">,</span> <span class="n">long_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;no match found for </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">long_name</span><span class="p">))</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_params</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_return</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">params</span><span class="p">,</span> <span class="n">ret</span></div>
+
+    <span class="k">def</span> <span class="nf">_match_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
+        <span class="n">plist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">rest_param</span> <span class="o">=</span> <span class="n">param</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">rest_param</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">rest_param</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;;&#39;</span><span class="p">:</span>
+            <span class="n">rest_param</span><span class="p">,</span> <span class="n">bc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_bracket</span><span class="p">(</span><span class="n">rest_param</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rest_param</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">):</span>
+                <span class="n">tmp</span> <span class="o">=</span> <span class="n">rest_param</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+
+                <span class="c1"># reattach the rest</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">rest_param</span> <span class="o">=</span> <span class="s1">&#39;;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="s1">&#39;;&#39;</span>  <span class="c1"># need to append ; again</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">rest_param</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="c1"># drop L, ; is already dropped</span>
+                <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_match_l</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">:]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_match_dt</span><span class="p">(</span><span class="n">rest_param</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                <span class="n">rest_param</span> <span class="o">=</span> <span class="n">rest_param</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">plist</span>
+
+    <span class="k">def</span> <span class="nf">_match_l_inner</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">match</span><span class="p">):</span>
+        <span class="n">num_ls</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">match</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">while</span> <span class="n">c</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">):</span>
+            <span class="n">num_ls</span> <span class="o">+=</span> <span class="s1">&#39;L&#39;</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">num_ls</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">match</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">_match_l</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;$&#39;</span> <span class="ow">in</span> <span class="n">dt</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_l_inner</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="s1">&#39;$&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s1">&#39;.&#39;</span> <span class="ow">in</span> <span class="n">dt</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_l_inner</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s1">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">dt</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_l_inner</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">dt</span>
+
+    <span class="k">def</span> <span class="nf">_match_dt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="n">dt</span><span class="p">,</span> <span class="n">bc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_bracket</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="n">SM_DT</span><span class="p">[</span><span class="n">dt</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;[SM MATCH] no such dt key: </span><span class="si">{}</span><span class="s1"> for long_name: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_long_name</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+    <span class="k">def</span> <span class="nf">_match_return</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span>
+        <span class="n">ret</span><span class="p">,</span> <span class="n">bc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_bracket</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ret</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_dt</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># get everything between L and ; and return last part</span>
+            <span class="k">return</span> <span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="n">bc</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match_l</span><span class="p">(</span><span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="ComplexityJava"><a class="viewcode-back" href="../../api.html#util.complexity_java.ComplexityJava">[docs]</a><span class="k">class</span> <span class="nc">ComplexityJava</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Extracts complexity measures from the AST.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">compilation_unit_ast</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Extract complexity measures from the compilation units AST.</span>
+
+<span class="sd">        :param compilation_unit_ast: The AST of the compilation unit (.java file).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ast</span> <span class="o">=</span> <span class="n">compilation_unit_ast</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;coastSHARK&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_binop</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;binop:&quot;(!?\W+)&quot;&#39;</span><span class="p">)</span>  <span class="c1"># used to match operators for sequence changes</span>
+
+    <span class="k">def</span> <span class="nf">_method_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Extract method parameter and return types, we already do some Sourcmeter notations here, e.g., [ for array.&quot;&quot;&quot;</span>
+        <span class="n">ret_type</span> <span class="o">=</span> <span class="s1">&#39;Void&#39;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="s1">&#39;return_type&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">method</span><span class="o">.</span><span class="n">return_type</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">return_type</span>
+
+            <span class="c1"># see below</span>
+            <span class="n">dim</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="s1">&#39;dimensions&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">dimensions</span><span class="p">:</span>
+                <span class="n">dim</span> <span class="o">=</span> <span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">dimensions</span><span class="p">)</span>
+
+            <span class="c1"># see below</span>
+            <span class="k">while</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="s1">&#39;sub_type&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">sub_type</span><span class="p">:</span>
+                <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">sub_type</span>
+
+            <span class="n">ret_type</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">method</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">type</span>
+
+            <span class="c1"># we count dimensions which gives us the array informaiton, e.g., int[] or int[][], we also add this in sourcemeter notation</span>
+            <span class="n">dim</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="s1">&#39;dimensions&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">t</span><span class="o">.</span><span class="n">dimensions</span><span class="p">:</span>
+                <span class="n">dim</span> <span class="o">=</span> <span class="s1">&#39;[&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">dimensions</span><span class="p">)</span>
+
+            <span class="c1"># method(String... args)</span>
+            <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">varargs</span><span class="p">:</span>
+                <span class="n">dim</span> <span class="o">=</span> <span class="s1">&#39;[&#39;</span>
+
+            <span class="c1"># we follow the chain because if we would not do that we would return java instead of ResultSet for java.sql.ResultSet</span>
+            <span class="k">while</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="s1">&#39;sub_type&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">t</span><span class="o">.</span><span class="n">sub_type</span><span class="p">:</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">sub_type</span>
+
+            <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">params</span><span class="p">,</span> <span class="n">ret_type</span>
+
+    <span class="k">def</span> <span class="nf">_find_max_level</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find maximal level for Counting anonymous Classes.</span>
+
+<span class="sd">        A normal ClassDeclaration counts as one level, a ClassCreator counts only if it has inline methods defined.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">max_level</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">method</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ast</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">method</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">!=</span> <span class="s1">&#39;MethodDeclaration&#39;</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">level</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;ClassDeclaration&#39;</span><span class="p">:</span>
+                    <span class="n">level</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;ClassCreator&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s1">&#39;MethodDeclaration&#39;</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]]:</span>
+                        <span class="n">level</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">level</span> <span class="o">&gt;</span> <span class="n">max_level</span><span class="p">:</span>
+                <span class="n">max_level</span> <span class="o">=</span> <span class="n">level</span>
+        <span class="k">return</span> <span class="n">max_level</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">_class_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return class name in Sourcemeter notation.&quot;&quot;&quot;</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="n">class_name</span> <span class="o">=</span> <span class="s1">&#39;$&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;ClassDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;InterfaceDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;EnumDeclaration&#39;</span><span class="p">]:</span>
+
+                <span class="c1"># in this case we have a named class inside a method we prepend the counter ala $1NamedClass</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">path</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;MethodDeclaration&#39;</span><span class="p">:</span>
+                    <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_count_map</span><span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">n</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+                <span class="c1"># normal named class, just append the name</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;ClassCreator&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_immediate_method</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_count_map</span><span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">class_name</span> <span class="o">=</span> <span class="s1">&#39;$&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">class_name</span>
+
+    <span class="k">def</span> <span class="nf">_has_immediate_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if the node has a method.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">n1</span> <span class="ow">in</span> <span class="n">node</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n1</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;MethodDeclaration&#39;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">_parent_pos</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return parent position for our relevant node types.&quot;&quot;&quot;</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;ClassDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;InterfaceDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;EnumDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;ClassCreator&#39;</span><span class="p">]:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;ClassDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;InterfaceDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;EnumDeclaration&#39;</span><span class="p">]:</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="n">n</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;ClassCreator&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_immediate_method</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="n">n</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="n">first</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_parse_level_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ast</span><span class="p">,</span> <span class="n">max_level</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Count positions and levels for our relevant node types.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">current_level</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_level</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">ast</span><span class="p">:</span>
+                <span class="c1"># these do not count towards levels</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;ClassDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;InterfaceDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;EnumDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;ClassCreator&#39;</span><span class="p">]:</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># these count towards the levels</span>
+                <span class="n">level</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;ClassDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;InterfaceDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;EnumDeclaration&#39;</span><span class="p">]:</span>
+                        <span class="n">level</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;ClassCreator&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_immediate_method</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                        <span class="n">level</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="c1"># evaluate the current level</span>
+                <span class="k">if</span> <span class="n">level</span> <span class="o">==</span> <span class="n">current_level</span><span class="p">:</span>
+
+                    <span class="c1"># we do only count classCreator nodes with inline methods</span>
+                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;ClassCreator&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_immediate_method</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+                        <span class="k">continue</span>
+                    <span class="n">parent_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_pos</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                    <span class="c1"># sadly, we need two lists, one for ClassCreators with methods and another for named classes that are defined inside methods</span>
+                    <span class="k">if</span> <span class="n">parent_pos</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_level_map</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_level_map</span><span class="p">[</span><span class="n">parent_pos</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+                    <span class="k">if</span> <span class="n">parent_pos</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_level_map2</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_level_map2</span><span class="p">[</span><span class="n">parent_pos</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+                    <span class="c1"># only count pos for inline classes in methods</span>
+                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;ClassDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;InterfaceDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;EnumDeclaration&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">path</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;MethodDeclaration&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_level_map2</span><span class="p">[</span><span class="n">parent_pos</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="c1"># or inline class creators with methods</span>
+                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;ClassCreator&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_immediate_method</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_level_map</span><span class="p">[</span><span class="n">parent_pos</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                    <span class="n">pos1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_level_map</span><span class="p">[</span><span class="n">parent_pos</span><span class="p">]</span>
+                    <span class="n">pos2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_level_map2</span><span class="p">[</span><span class="n">parent_pos</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_count_map</span><span class="p">[</span><span class="n">line</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">pos1</span><span class="p">,</span> <span class="n">pos2</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ComplexityJava.cognitive_complexity"><a class="viewcode-back" href="../../api.html#util.complexity_java.ComplexityJava.cognitive_complexity">[docs]</a>    <span class="k">def</span> <span class="nf">cognitive_complexity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Extract complexity metrics for all methods of the current file.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_level_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_level_map2</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_count_map</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parse_level_positions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ast</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_max_level</span><span class="p">())</span>
+
+        <span class="n">package</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ast</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">javalang</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">PackageDeclaration</span><span class="p">):</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">method</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ast</span><span class="p">:</span>
+
+            <span class="c1"># we only are interested in methods and constructors</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">method</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MethodDeclaration&#39;</span><span class="p">,</span> <span class="s1">&#39;ConstructorDeclaration&#39;</span><span class="p">]:</span>
+                <span class="k">continue</span>
+
+            <span class="n">full_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_class_name</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+            <span class="n">method_name</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">method</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="s1">&#39;ConstructorDeclaration&#39;</span><span class="p">:</span>
+                <span class="n">method_name</span> <span class="o">=</span> <span class="s1">&#39;&lt;init&gt;&#39;</span>  <span class="c1"># sourcemeter notation</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;evaluating package </span><span class="si">{}</span><span class="s1">, class </span><span class="si">{}</span><span class="s1">, method </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">full_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">))</span>
+
+            <span class="c1"># gather metrics from the metric ast</span>
+            <span class="n">cogcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cognitive_complexity_sonar</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+            <span class="n">cc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cyclomatic_complexity</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+
+            <span class="n">params</span><span class="p">,</span> <span class="n">ret_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_method_params</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+
+            <span class="c1"># we may have interface methods with a body (default methods)</span>
+            <span class="n">im</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">body</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="k">yield</span> <span class="p">{</span><span class="s1">&#39;package_name&#39;</span><span class="p">:</span> <span class="n">package</span><span class="p">,</span> <span class="s1">&#39;class_name&#39;</span><span class="p">:</span> <span class="n">full_name</span><span class="p">,</span> <span class="s1">&#39;method_name&#39;</span><span class="p">:</span> <span class="n">method_name</span><span class="p">,</span> <span class="s1">&#39;return_type&#39;</span><span class="p">:</span> <span class="n">ret_type</span><span class="p">,</span> <span class="s1">&#39;parameter_types&#39;</span><span class="p">:</span> <span class="n">params</span><span class="p">,</span> <span class="s1">&#39;cognitive_complexity_sonar&#39;</span><span class="p">:</span> <span class="n">cogcs</span><span class="p">,</span> <span class="s1">&#39;cyclomatic_complexity&#39;</span><span class="p">:</span> <span class="n">cc</span><span class="p">,</span> <span class="s1">&#39;is_interface_method&#39;</span><span class="p">:</span> <span class="n">im</span><span class="p">}</span></div>
+
+<div class="viewcode-block" id="ComplexityJava.cognitive_complexity_sonar"><a class="viewcode-back" href="../../api.html#util.complexity_java.ComplexityJava.cognitive_complexity_sonar">[docs]</a>    <span class="k">def</span> <span class="nf">cognitive_complexity_sonar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Extract cognitive complexity.</span>
+
+<span class="sd">        Description here: https://www.sonarsource.com/docs/CognitiveComplexity.pdf</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cogcs</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">cogcs</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nesting</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+        <span class="n">cogcs</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_binop_cc</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+        <span class="n">cogcs</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recursion</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cogcs</span></div>
+
+<div class="viewcode-block" id="ComplexityJava.cyclomatic_complexity"><a class="viewcode-back" href="../../api.html#util.complexity_java.ComplexityJava.cyclomatic_complexity">[docs]</a>    <span class="k">def</span> <span class="nf">cyclomatic_complexity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Extract cyclomatic complexity (not really, we just count branch types).&quot;&quot;&quot;</span>
+        <span class="n">cc</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">method</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="n">JAVA_BRANCH_TYPES_MCCC</span><span class="p">:</span>
+                <span class="n">cc</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">cc</span></div>
+
+    <span class="k">def</span> <span class="nf">_sequence_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="c1"># 1. remove BinaryOperator from path until parent object is reached</span>
+        <span class="n">basepath</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="nb">type</span><span class="p">(</span><span class="n">basepath</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;BinaryOperation&#39;</span><span class="p">,</span> <span class="s1">&#39;list&#39;</span><span class="p">]:</span>
+            <span class="n">basepath</span> <span class="o">=</span> <span class="n">basepath</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">basepath</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;BinaryOperation&#39;</span> <span class="ow">and</span> <span class="n">basepath</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">operator</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">JAVA_SEQUENCE_TYPES</span><span class="p">:</span>
+                <span class="n">basepath</span> <span class="o">=</span> <span class="n">basepath</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">continue</span>
+
+        <span class="c1"># 2. use the position of the parent of the BinaryOperation, e.g., if, while as key</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">basepath</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">position</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;no position for: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">basepath</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">basepath</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_recursion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Detect recursion in method.</span>
+
+<span class="sd">        This has drawbacks! We will count recursion if we call a method of the same name as the current but with different attributes.</span>
+<span class="sd">        We do not have the ability to discern attribute types only names and number of attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cc</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">method</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;MethodInvocation&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">member</span> <span class="o">==</span> <span class="n">method</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+                    <span class="n">cc</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">cc</span>
+
+    <span class="k">def</span> <span class="nf">_binop_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">binop</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="n">binop</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;BinaryOperation&#39;</span> <span class="ow">and</span> <span class="n">binop</span><span class="o">.</span><span class="n">operator</span> <span class="ow">in</span> <span class="n">JAVA_SEQUENCE_TYPES</span>
+
+    <span class="k">def</span> <span class="nf">_binop_cc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Here we look at sequences of binary operations.</span>
+
+<span class="sd">        To group them together we first find the position of one binary sequences containing element (if, etc.)</span>
+<span class="sd">        As we are traversing the tree our first BinaryOperation for a certain containing element will be the middle of all BinaryStatements on the line.</span>
+<span class="sd">        From there on we traverse the tree and get the sequence in prefix notation.</span>
+<span class="sd">        We then change to infix notation so that we can count the changes in operators that the human would see and count that.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">sequences</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">method</span><span class="p">:</span>
+            <span class="c1"># this hould be the first binop per key</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_binop_check</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sequence_key</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tmp</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">tmp</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+
+        <span class="c1"># this appends the nodes to the list in prefix notation</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tmp</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">sequences</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">v</span><span class="p">:</span>
+                <span class="n">sequences</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+        <span class="c1"># create infix from prefix notation</span>
+        <span class="n">nseq</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sequences</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">stack</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_binop_check</span><span class="p">(</span><span class="n">op</span><span class="p">):</span>
+                    <span class="n">p1</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                    <span class="n">p2</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                    <span class="n">p</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="s1">&#39;prefix_operators&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">op</span><span class="o">.</span><span class="n">prefix_operators</span><span class="p">:</span>
+                        <span class="n">p</span> <span class="o">=</span> <span class="s1">&#39;!&#39;</span>
+                    <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;(</span><span class="si">{}</span><span class="s1"> binop:&quot;</span><span class="si">{}{}</span><span class="s1">&quot; </span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">op</span><span class="o">.</span><span class="n">operator</span><span class="p">,</span> <span class="n">p2</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+            <span class="n">nseq</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="c1"># get the human readable sequence of operators and prefix operator (!)</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">nseq</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_binop</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+                    <span class="n">tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">sequences</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;[seq] found sequence </span><span class="si">{}</span><span class="s1"> at pos </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">k</span><span class="p">))</span>
+
+        <span class="c1"># count the changes in sequences via the operators, e.g., a &amp;&amp; b || c</span>
+        <span class="n">full_cc</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sequences</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">cc</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">binop</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+                <span class="n">prefix</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">binop</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># we have a prefix</span>
+                    <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;!&#39;</span>
+                    <span class="n">binop</span> <span class="o">=</span> <span class="n">binop</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="k">if</span> <span class="n">binop</span> <span class="o">!=</span> <span class="n">op</span><span class="p">:</span>
+                    <span class="n">cc</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">elif</span> <span class="n">prefix</span><span class="p">:</span>  <span class="c1"># binop == op but binop has prefix</span>
+                    <span class="n">cc</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">op</span> <span class="o">=</span> <span class="n">binop</span>
+            <span class="n">full_cc</span> <span class="o">+=</span> <span class="n">cc</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;[seq] cc for sequence </span><span class="si">{}</span><span class="s1"> at </span><span class="si">{}</span><span class="s1"> is </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">cc</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">full_cc</span>
+
+    <span class="k">def</span> <span class="nf">_nesting</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="n">cc</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">method</span><span class="p">:</span>
+
+            <span class="n">nest</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># MethodDeclaration does not count so we can do this here</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="n">JAVA_NESTING_TYPES</span><span class="p">:</span>
+                    <span class="n">nest</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;[nest] </span><span class="si">{}</span><span class="s1"> in </span><span class="si">{}</span><span class="s1"> increase nesting level to </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="s1">&#39;JAVA_NESTING_TYPES&#39;</span><span class="p">,</span> <span class="n">nest</span><span class="p">))</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="n">JAVA_NESTING_TYPES</span><span class="p">:</span>
+                    <span class="n">nest</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;[nest] </span><span class="si">{}</span><span class="s1"> in </span><span class="si">{}</span><span class="s1"> increase nesting level to </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;JAVA_NESTING_TYPES&#39;</span><span class="p">,</span> <span class="n">nest</span><span class="p">))</span>
+
+            <span class="n">nesting</span> <span class="o">=</span> <span class="n">nest</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="n">JAVA_BRANCH_TYPES</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;TryStatement&#39;</span><span class="p">]:</span>
+                <span class="n">cc</span> <span class="o">+=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">nesting</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;[nest] </span><span class="si">{}</span><span class="s1"> in </span><span class="si">{}</span><span class="s1"> increase cc to </span><span class="si">{}</span><span class="s1"> including nesting </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s1">&#39;JAVA_BRANCH_TYPES and Try&#39;</span><span class="p">,</span> <span class="n">cc</span><span class="p">,</span> <span class="n">nesting</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">cc</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Alexander Trautsch
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
